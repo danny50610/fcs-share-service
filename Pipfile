@@ -8,6 +8,8 @@ fastapi = {extras = ["standard"], version = "*"}
 sqlmodel = "*"
 psycopg2-binary = "*"
 pydantic-settings = "*"
+passlib = {extras = ["bcrypt"], version = "*"}
+pyjwt = "*"
 
 [dev-packages]
 
