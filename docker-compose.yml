@@ -1,0 +1,14 @@
+services:
+  postgres-15:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: "homestead"
+      POSTGRES_USER: "homestead"
+      POSTGRES_PASSWORD: "secret"
+    ports:
+      - '54329:5432'
+    volumes:
+      - postgres-15:/var/lib/postgresql/data
+
+volumes:
+  postgres-15:

@@ -5,6 +5,9 @@ name = "pypi"
 
 [packages]
 fastapi = {extras = ["standard"], version = "*"}
+sqlmodel = "*"
+psycopg2-binary = "*"
+pydantic-settings = "*"
 
 [dev-packages]
 
