@@ -1,15 +1,21 @@
 from datetime import datetime, timedelta, timezone
+import os
 import secrets
+import string
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+import aiofiles
+from fastapi import Depends, FastAPI, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
+import flowio
 import jwt
 from sqlmodel import Session, SQLModel, create_engine, select
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from passlib.context import CryptContext
 
-from app.models import User, ShortLink, Token
+from app.models import ShortLinkPublic, User, ShortLink, Token
+import uuid
 
 
 class Settings(BaseSettings):
@@ -91,6 +97,71 @@ def login_access_token(
             user.id, expires_delta=timedelta(minutes=60)
         )
     )
+
+@app.get("/short-link/{slug}")
+def get_short_link_content(slug: str, session: SessionDep):
+    short_link = session.exec(select(ShortLink).where(ShortLink.slug == slug)).first()
+    if not short_link:
+        raise HTTPException(status_code=404, detail="Short link not found")
+
+    storage_full_filename = os.path.join('storage', short_link.filename)
+    def iterfile():
+        with open(storage_full_filename, mode="rb") as file_like:
+            yield from file_like
+
+    return StreamingResponse(iterfile(), media_type="application/vnd.isac.fcs")
+
+
+def generate_unique_slug(session: SessionDep) -> str:
+    chars = string.ascii_letters + string.digits
+    while True:
+        slug = ''.join(secrets.choice(chars) for _ in range(8))
+        existing = session.exec(select(ShortLink).where(ShortLink.slug == slug)).first()
+        if not existing:
+            return slug
+
+
+@app.post("/short-link/upload-anonymous", response_model=ShortLinkPublic)
+async def upload_anonymous(file: UploadFile, session: SessionDep):
+    filesize = file.size if file.size else 0
+    if filesize == 0:
+        raise HTTPException(status_code=400, detail="File size cannot be zero")
+    if filesize > 1000 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size exceeds 1000MB limit")
+    
+    storage_filename = str(uuid.uuid4()) + '.fcs'
+    storage_full_filename = os.path.join('storage', storage_filename)
+    async with aiofiles.open(storage_full_filename, 'wb') as out_file:
+        content = await file.read()
+        await out_file.write(content)
+
+    try:
+        fd = flowio.FlowData(storage_full_filename)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid FCS file")
+
+    short_link = ShortLink(
+        slug=generate_unique_slug(session),
+        original_file=file.filename if file.filename else "",
+        filename = storage_filename,
+        filesize=filesize,
+        created_at=datetime.now(timezone.utc),
+        fcs_version=fd.version
+    )
+
+    session.add(short_link)
+    session.commit()
+    session.refresh(short_link)
+
+    return short_link
+
+
+# @app.post("/heroes/")
+# def create_hero(hero: Hero, session: SessionDep) -> Hero:
+#     session.add(hero)
+#     session.commit()
+#     session.refresh(hero)
+#     return hero
 
 
 # @app.get("/heroes/")

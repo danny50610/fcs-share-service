@@ -7,13 +7,30 @@ class User(SQLModel, table=True):
     password: str = Field()
 
 
-class ShortLink(SQLModel, table=True):
+class ShortLinkBase(SQLModel):
+    original_file: str = Field()
+
+
+class ShortLink(ShortLinkBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     slug: str = Field(index=True, unique=True)
-    original_file: str
+    filename: str = Field()
     filesize: int = Field()
     created_at: datetime | None = Field()
     fcs_version: str = Field()
+
+
+class ShortLinkPublic(ShortLinkBase):
+    slug: str
+    original_file: str
+    filesize: int
+    created_at: datetime | None
+    fcs_version: str
+
+
+# class ShortLinkUpdate(ShortLinkBase):
+#     pass
+
 
 class Token(SQLModel):
     access_token: str
