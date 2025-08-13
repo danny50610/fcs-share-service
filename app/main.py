@@ -5,21 +5,25 @@ import string
 from typing import Annotated, Any
 
 import aiofiles
-from fastapi import Depends, FastAPI, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import flowio
 import jwt
 from sqlmodel import Session, SQLModel, create_engine, select
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from passlib.context import CryptContext
 
-from app.models import ShortLinkPublic, User, ShortLink, Token
+from app.models import ShortLinkPublic, TokenPayload, User, ShortLink, Token
 import uuid
+
+from jwt.exceptions import InvalidTokenError
+from pydantic import ValidationError
 
 
 class Settings(BaseSettings):
     postgres_url: str = ''
+    API_URL: str = 'http://127.0.0.1:8000'
     SECRET_KEY: str = secrets.token_urlsafe(32)
 
     model_config = SettingsConfigDict(env_file=".env")
@@ -37,12 +41,49 @@ def get_session():
     with Session(engine) as session:
         yield session
 
+reusable_oauth2 = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_URL}/login",
+    auto_error=False,
+)
 
 SessionDep = Annotated[Session, Depends(get_session)]
+TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
+def get_current_user(session: SessionDep, token: TokenDep, required: bool = True) -> User | None:
+    if not token:
+        if required:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authenticated",
+            )
+        return None
+
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=["HS256"]
+        )
+        token_data = TokenPayload(**payload)
+    except (InvalidTokenError, ValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authenticated",
+        )
+
+    user = session.get(User, token_data.sub)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authenticated",
+        )
+
+    return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
+OptionalCurrentUser = Annotated[User | None, Depends(lambda session=Depends(get_session), token=Depends(reusable_oauth2): get_current_user(session, token, required=False))]
 
 app = FastAPI()
-
 
 @app.on_event("startup")
 def on_startup():
@@ -121,8 +162,8 @@ def generate_unique_slug(session: SessionDep) -> str:
             return slug
 
 
-@app.post("/short-link/upload-anonymous", response_model=ShortLinkPublic)
-async def upload_anonymous(file: UploadFile, session: SessionDep):
+@app.post("/short-link/", response_model=ShortLinkPublic)
+async def short_link_create(file: UploadFile, session: SessionDep, current_user: OptionalCurrentUser):
     filesize = file.size if file.size else 0
     if filesize == 0:
         raise HTTPException(status_code=400, detail="File size cannot be zero")
@@ -153,15 +194,9 @@ async def upload_anonymous(file: UploadFile, session: SessionDep):
     session.commit()
     session.refresh(short_link)
 
+    # print(current_user.email if current_user else "Anonymous user")
+
     return short_link
-
-
-# @app.post("/heroes/")
-# def create_hero(hero: Hero, session: SessionDep) -> Hero:
-#     session.add(hero)
-#     session.commit()
-#     session.refresh(hero)
-#     return hero
 
 
 # @app.get("/heroes/")
