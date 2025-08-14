@@ -80,7 +80,7 @@ def get_current_user(session: SessionDep, token: TokenDep, required: bool = True
     return user
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUser = Annotated[User, Depends(lambda session=Depends(get_session), token=Depends(reusable_oauth2): get_current_user(session, token, required=True))]
 OptionalCurrentUser = Annotated[User | None, Depends(lambda session=Depends(get_session), token=Depends(reusable_oauth2): get_current_user(session, token, required=False))]
 
 app = FastAPI()
@@ -154,6 +154,31 @@ def get_short_link_content(slug: str, session: SessionDep, current_user: Optiona
             yield from file_like
 
     return StreamingResponse(iterfile(), media_type="application/vnd.isac.fcs")
+
+
+@app.put("/short-link/{slug}/change-visibility")
+def change_short_link_visibility(
+    slug: str,
+    visibility: str,
+    session: SessionDep,
+    current_user: CurrentUser
+):
+    if visibility not in ["public", "private"]:
+        raise HTTPException(status_code=400, detail="Visibility must be 'public' or 'private'")
+
+    short_link = session.exec(select(ShortLink).where(ShortLink.slug == slug)).first()
+    if not short_link:
+        raise HTTPException(status_code=404, detail="Short link not found")
+
+    if short_link.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied to change visibility")
+
+    short_link.visibility = visibility
+    session.add(short_link)
+    session.commit()
+    session.refresh(short_link)
+
+    return short_link
 
 
 def generate_unique_slug(session: SessionDep) -> str:
