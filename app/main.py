@@ -140,10 +140,14 @@ def login_access_token(
     )
 
 @app.get("/short-link/{slug}")
-def get_short_link_content(slug: str, session: SessionDep):
+def get_short_link_content(slug: str, session: SessionDep, current_user: OptionalCurrentUser):
     short_link = session.exec(select(ShortLink).where(ShortLink.slug == slug)).first()
     if not short_link:
         raise HTTPException(status_code=404, detail="Short link not found")
+    
+    # FIXME: check if the user has access to the short link
+    if short_link.visibility == "private" and not current_user:
+        raise HTTPException(status_code=403, detail="Access denied to private link")
 
     storage_full_filename = os.path.join('storage', short_link.filename)
     def iterfile():

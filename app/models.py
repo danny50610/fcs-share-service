@@ -18,6 +18,7 @@ class ShortLink(ShortLinkBase, table=True):
     filesize: int = Field()
     created_at: datetime | None = Field()
     fcs_version: str = Field()
+    visibility: str = Field(default="private")  # 'public' or 'private'
 
 
 class ShortLinkPublic(ShortLinkBase):
@@ -28,13 +29,10 @@ class ShortLinkPublic(ShortLinkBase):
     fcs_version: str
 
 
-# class ShortLinkUpdate(ShortLinkBase):
-#     pass
-
-
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
+
 
 class TokenPayload(SQLModel):
     sub: str | None = None
