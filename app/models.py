@@ -27,6 +27,8 @@ class ShortLink(ShortLinkBase, table=True):
     slug: str = Field(index=True, unique=True)
     filename: str = Field()
     filesize: int = Field()
+    pnn: int | None = Field(default=None, nullable=True)
+    event_count: int | None = Field(default=None, nullable=True)
     fcs_version: str = Field()
     visibility: str = Field(default="private")  # 'public' or 'private'
     user_id: int | None = Field(default=None, foreign_key="user.id")

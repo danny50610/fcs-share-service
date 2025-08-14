@@ -226,6 +226,8 @@ async def short_link_create(
         filename = storage_filename,
         filesize=filesize,
         visibility=visibility,
+        pnn=len(fd.pnn_labels),
+        event_count=fd.event_count,
         fcs_version=fd.version,
         user_id=current_user.id if current_user else None,
         created_at=datetime.now(timezone.utc),
