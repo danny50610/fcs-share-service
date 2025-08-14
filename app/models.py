@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -12,6 +13,7 @@ class User(SQLModel, table=True):
     email: str
     password: str = Field()
     short_links: List["ShortLink"] = Relationship(back_populates="user")
+    statistics_jobs: List["StatisticsJob"] = Relationship(back_populates="user")
 
 
 class UserPublic(UserBase):
@@ -44,6 +46,16 @@ class ShortLinkPublic(ShortLinkBase):
     created_at: datetime | None
     fcs_version: str
 
+
+class StatisticsJob(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    job_id: str = Field(index=True, unique=True)
+    status: str = Field(default="pending")
+    result: dict = Field(sa_type=JSONB, default=None)
+    user_id: int | None = Field(default=None, foreign_key="user.id")
+    created_at: datetime | None = Field()
+
+    user: Optional[User] = Relationship(back_populates="statistics_jobs")
 
 
 # ------------------------------

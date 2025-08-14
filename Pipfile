@@ -12,6 +12,7 @@ passlib = {extras = ["bcrypt"], version = "*"}
 pyjwt = "*"
 aiofiles = "*"
 flowio = "*"
+celery = {extras = ["redis"], version = "*"}
 
 [dev-packages]
 

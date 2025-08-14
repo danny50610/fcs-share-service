@@ -11,24 +11,17 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import flowio
 import jwt
 from sqlmodel import Session, SQLModel, create_engine, select
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from passlib.context import CryptContext
 
-from app.models import ShortLinkPublic, TokenPayload, User, ShortLink, Token
+from app import task
+from app.settings import settings
+from app.models import ShortLinkPublic, StatisticsJob, TokenPayload, User, ShortLink, Token
 import uuid
 
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 
-
-class Settings(BaseSettings):
-    postgres_url: str = ''
-    API_URL: str = 'http://127.0.0.1:8000'
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-
-    model_config = SettingsConfigDict(env_file=".env")
-
-settings = Settings()
+from celery.result import AsyncResult
 
 engine = create_engine(settings.postgres_url)
 
@@ -238,3 +231,35 @@ async def short_link_create(
     session.refresh(short_link)
 
     return short_link
+
+# celery --app=app.task.app worker --concurrency=1 --loglevel=DEBUG
+@app.post('/statistics-job')
+def create_statistics_job(session: SessionDep, current_user: CurrentUser):
+    t: AsyncResult
+    t = task.statistics.delay()
+    
+    statistics_job = StatisticsJob(
+        job_id=t.task_id, # type: ignore
+        status='pending',
+        user_id=current_user.id,
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(statistics_job)
+    session.commit()
+    session.refresh(statistics_job)
+
+    return {"job_id": statistics_job.job_id}
+
+
+@app.get('/statistics-job/{job_id}')
+def get_statistics_job(job_id: str, session: SessionDep):
+    statistics_job = session.exec(select(StatisticsJob).where(StatisticsJob.job_id == job_id)).first()
+    if not statistics_job:
+        raise HTTPException(status_code=404, detail="Statistics job not found")
+
+    return {
+        "job_id": statistics_job.job_id,
+        "status": statistics_job.status,
+        "result": statistics_job.result,
+        "created_at": statistics_job.created_at,
+    }
