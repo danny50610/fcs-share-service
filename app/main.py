@@ -145,8 +145,7 @@ def get_short_link_content(slug: str, session: SessionDep, current_user: Optiona
     if not short_link:
         raise HTTPException(status_code=404, detail="Short link not found")
     
-    # FIXME: check if the user has access to the short link
-    if short_link.visibility == "private" and not current_user:
+    if short_link.visibility == "private" and (not current_user or current_user.id != short_link.user_id):
         raise HTTPException(status_code=403, detail="Access denied to private link")
 
     storage_full_filename = os.path.join('storage', short_link.filename)
@@ -167,13 +166,24 @@ def generate_unique_slug(session: SessionDep) -> str:
 
 
 @app.post("/short-link/", response_model=ShortLinkPublic)
-async def short_link_create(file: UploadFile, session: SessionDep, current_user: OptionalCurrentUser):
+async def short_link_create(
+    file: UploadFile,
+    session: SessionDep,
+    visibility: str,
+    current_user: OptionalCurrentUser
+):
     filesize = file.size if file.size else 0
     if filesize == 0:
         raise HTTPException(status_code=400, detail="File size cannot be zero")
     if filesize > 1000 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File size exceeds 1000MB limit")
     
+    if visibility not in ["public", "private"]:
+        raise HTTPException(status_code=400, detail="Visibility must be 'public' or 'private'")
+    
+    if current_user is None:
+        visibility = "public"  # If no user is logged in, default to public visibility
+
     storage_filename = str(uuid.uuid4()) + '.fcs'
     storage_full_filename = os.path.join('storage', storage_filename)
     async with aiofiles.open(storage_full_filename, 'wb') as out_file:
@@ -190,15 +200,15 @@ async def short_link_create(file: UploadFile, session: SessionDep, current_user:
         original_file=file.filename if file.filename else "",
         filename = storage_filename,
         filesize=filesize,
+        visibility=visibility,
+        fcs_version=fd.version,
+        user_id=current_user.id if current_user else None,
         created_at=datetime.now(timezone.utc),
-        fcs_version=fd.version
     )
 
     session.add(short_link)
     session.commit()
     session.refresh(short_link)
-
-    # print(current_user.email if current_user else "Anonymous user")
 
     return short_link
 

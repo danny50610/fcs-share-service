@@ -1,10 +1,21 @@
 from datetime import datetime
-from sqlmodel import Field, SQLModel
+from typing import List, Optional
+from sqlmodel import Field, Relationship, SQLModel
+
+
+class UserBase(SQLModel):
+    email: str = Field(index=True, unique=True)
+
 
 class User(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    email: str = Field(index=True, unique=True)
+    id: int = Field(primary_key=True)
+    email: str
     password: str = Field()
+    short_links: List["ShortLink"] = Relationship(back_populates="user")
+
+
+class UserPublic(UserBase):
+    id: int
 
 
 class ShortLinkBase(SQLModel):
@@ -16,9 +27,12 @@ class ShortLink(ShortLinkBase, table=True):
     slug: str = Field(index=True, unique=True)
     filename: str = Field()
     filesize: int = Field()
-    created_at: datetime | None = Field()
     fcs_version: str = Field()
     visibility: str = Field(default="private")  # 'public' or 'private'
+    user_id: int | None = Field(default=None, foreign_key="user.id")
+    created_at: datetime | None = Field()
+
+    user: Optional[User] = Relationship(back_populates="short_links")
 
 
 class ShortLinkPublic(ShortLinkBase):
@@ -29,10 +43,15 @@ class ShortLinkPublic(ShortLinkBase):
     fcs_version: str
 
 
+
+# ------------------------------
+# Token Models
+# ------------------------------
+
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
 
 
 class TokenPayload(SQLModel):
-    sub: str | None = None
+    sub: Optional[str] = None
