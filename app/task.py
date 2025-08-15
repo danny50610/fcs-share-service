@@ -2,6 +2,7 @@ from celery.app import Celery
 from app.models import ShortLink, StatisticsJob, User
 from app.settings import settings
 from sqlmodel import Session, create_engine, select
+from app.log import logger
 
 engine = create_engine(settings.postgres_url)
 
@@ -27,6 +28,7 @@ def statistics(self):
     session.add(statistics_job)
     session.commit()
     session.refresh(statistics_job)
+    logger.debug(f"task status updated: job_id={job_id}, status={statistics_job.status}")
 
     result = do_statistics_job()
 
@@ -35,6 +37,7 @@ def statistics(self):
     session.add(statistics_job)
     session.commit()
     session.refresh(statistics_job)
+    logger.debug(f"task status updated: job_id={job_id}, status={statistics_job.status}")
 
 
 def do_statistics_job():

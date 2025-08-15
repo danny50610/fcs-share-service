@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import time
+from app.log import logger
 import os
 import secrets
 import string
@@ -126,6 +128,8 @@ def login_access_token(
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
 
+    logger.debug(f"User logged in: user_id={user.id}, email={user.email}")
+
     return Token(
         access_token=create_access_token(
             user.id, expires_delta=timedelta(minutes=60)
@@ -171,6 +175,8 @@ def change_short_link_visibility(
     session.commit()
     session.refresh(short_link)
 
+    logger.debug(f"short link visibility changed: slug={short_link.slug}, user_id={current_user.id}, visibility={visibility}")
+
     return short_link
 
 
@@ -202,6 +208,8 @@ async def short_link_create(
     if current_user is None:
         visibility = "public"  # If no user is logged in, default to public visibility
 
+    start_time = time.time()
+
     storage_filename = str(uuid.uuid4()) + '.fcs'
     storage_full_filename = os.path.join('storage', storage_filename)
     async with aiofiles.open(storage_full_filename, 'wb') as out_file:
@@ -230,6 +238,8 @@ async def short_link_create(
     session.commit()
     session.refresh(short_link)
 
+    logger.debug(f"short link created: slug={short_link.slug}, user_id={current_user.id if current_user else 'None'}, estimated_time={time.time() - start_time:.3f}")
+
     return short_link
 
 # celery --app=app.task.app worker --concurrency=1 --loglevel=DEBUG
@@ -247,6 +257,7 @@ def create_statistics_job(session: SessionDep, current_user: CurrentUser):
     session.add(statistics_job)
     session.commit()
     session.refresh(statistics_job)
+    logger.debug(f"task status updated: job_id={statistics_job.job_id}, status={statistics_job.status}")
 
     return {"job_id": statistics_job.job_id}
 
