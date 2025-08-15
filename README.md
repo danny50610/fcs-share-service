@@ -32,7 +32,7 @@ docker-compose up -d
 
 ## API Documentation
 
-TODO:
+You can access the API documentation at `http://localhost:8080/docs` when the application is running.
 
 ## Run Tests (Unit & Integration)
 
