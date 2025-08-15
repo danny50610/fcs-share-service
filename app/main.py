@@ -242,7 +242,7 @@ async def short_link_create(
 
     return short_link
 
-# celery --app=app.task.app worker --concurrency=1 --loglevel=DEBUG
+
 @app.post('/statistics-job')
 def create_statistics_job(session: SessionDep, current_user: CurrentUser):
     t: AsyncResult
