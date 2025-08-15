@@ -6,6 +6,9 @@ services:
     ports:
       - '8080:8080'
     env_file: ".env.docker"
+    volumes:
+      - ./logs:/app/logs
+      - ./storage:/app/storage
     depends_on:
       - postgresql-15
       - redis
@@ -16,6 +19,9 @@ services:
       dockerfile: Dockerfile
     command: ["celery", "--app=app.task.app", "worker", "--concurrency=1"]
     env_file: ".env.docker"
+    volumes:
+      - ./logs:/app/logs
+      - ./storage:/app/storage
     depends_on:
       - postgresql-15
       - redis
