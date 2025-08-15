@@ -28,7 +28,9 @@ SECRET_KEY="your_secret_key"
 docker-compose up -d
 ```
 
-4. Access the application at `http://localhost:8080`
+4. Create the user
+
+5. Access the application doc at `http://localhost:8080/docs`
 
 ## API Documentation
 
@@ -52,7 +54,7 @@ pipenv shell
 
 3. Run the application:
 ```
-fastapi dev app/main.py
+fastapi dev app/main.py --port 8080
 ```
 
 4. Run the worker:

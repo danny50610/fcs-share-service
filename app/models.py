@@ -9,7 +9,7 @@ class UserBase(SQLModel):
 
 
 class User(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     email: str
     password: str = Field()
     short_links: List["ShortLink"] = Relationship(back_populates="user")
