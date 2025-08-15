@@ -35,6 +35,27 @@ docker-compose up -d
 TODO:
 
 ## Run Tests (Unit & Integration)
-```bash
 
 TODO:
+
+## Development
+
+1. Install dependencies:
+```
+PIPENV_VENV_IN_PROJECT=1 pipenv install
+```
+
+2. Activate the virtual environment:
+```
+pipenv shell
+```
+
+3. Run the application:
+```
+fastapi dev app/main.py
+```
+
+4. Run the worker:
+```
+celery --app=app.task.app worker --concurrency=1 --loglevel=DEBUG
+```
