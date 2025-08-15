@@ -13,6 +13,8 @@ pyjwt = "*"
 aiofiles = "*"
 flowio = "*"
 celery = {extras = ["redis"], version = "*"}
+httpx = "*"
+pytest = "*"
 
 [dev-packages]
 

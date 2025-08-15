@@ -114,6 +114,11 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     return encoded_jwt
 
 
+@app.get("/")
+def home():
+    return {"msg": "BAU BAU"}
+
+
 @app.post("/login")
 def login_access_token(
     session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]

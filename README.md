@@ -38,7 +38,9 @@ You can access the API documentation at `http://localhost:8080/docs` when the ap
 
 ## Run Tests (Unit & Integration)
 
-TODO:
+```
+python -m pytest
+```
 
 ## Development
 
