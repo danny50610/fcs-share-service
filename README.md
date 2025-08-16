@@ -36,12 +36,6 @@ docker-compose up -d
 
 You can access the API documentation at `http://localhost:8080/docs` when the application is running.
 
-## Run Tests (Unit & Integration)
-
-```
-python -m pytest
-```
-
 ## Development
 
 1. Install dependencies:
@@ -62,4 +56,24 @@ fastapi dev app/main.py --port 8080
 4. Run the worker:
 ```
 celery --app=app.task.app worker --concurrency=1 --loglevel=DEBUG
+```
+
+### Run Tests (Unit & Integration)
+
+1. create the `docker-compose.override.yaml` file with the following content:
+```
+services:
+  postgresql-15:
+    ports:
+      - '54329:5432'
+```
+
+2. create the test database (only once):
+```
+docker compose exec postgresql-15 psql -U homestead -c "CREATE DATABASE \"homestead-test\";"
+```
+
+3. Run the tests:
+```
+python -m pytest
 ```
