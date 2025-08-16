@@ -13,10 +13,10 @@ pyjwt = "*"
 aiofiles = "*"
 flowio = "*"
 celery = {extras = ["redis"], version = "*"}
-httpx = "*"
-pytest = "*"
 
 [dev-packages]
+pytest = "*"
+httpx = "*"
 
 [requires]
 python_version = "3.13"
