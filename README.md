@@ -28,7 +28,11 @@ SECRET_KEY="your_secret_key"
 docker-compose up -d
 ```
 
-4. Create the user
+4. Create the user, replace `<your_email>` with your email:
+```bash
+docker compose exec app python -m app.create_user "<your_email>"
+```
+Please remember password output by the command above.
 
 5. Access the application doc at `http://localhost:8080/docs`
 
